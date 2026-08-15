@@ -1901,6 +1901,28 @@ export interface Config {
 
 来源：[`packages/skill/skill-filesystem/src/index.ts:49`](../packages/skill/skill-filesystem/src/index.ts)
 
+<a id="deepseek-aidsh-soym-quant"></a>
+
+## `@deepseek-ai/dsh-soym-quant`
+
+需要：`tools`
+
+```ts config-catalog
+/** Plugin config: where and how `soym_commit` stages and commits. */
+export interface Config {
+  /** Repository root the tool stages and commits in. Required — the SOYM workspace is deployment-specific. */
+  workspace: string
+  /** Git executable. Defaults to `git`. */
+  gitBin?: string
+  /** Per-command timeout in milliseconds. Defaults to 60000. */
+  timeoutMs?: number
+  /** Stage the whole tree (`git add -A`) when no paths are given. Defaults to true. */
+  commitAll?: boolean
+}
+```
+
+来源：[`packages/soym/soym-quant/src/index.ts:18`](../packages/soym/soym-quant/src/index.ts)
+
 <a id="deepseek-aidsh-spill-local"></a>
 
 ## `@deepseek-ai/dsh-spill-local`

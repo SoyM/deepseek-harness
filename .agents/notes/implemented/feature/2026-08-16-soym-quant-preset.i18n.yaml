@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-16-soym-quant-preset.md
+2026-08-16-soym-quant-preset.md: d415f7ce823fc3e1b6ed0587d631b0194acd2511
+2026-08-16-soym-quant-preset.zh.md: 86361d0de0aaa71282c0f029d274f9c9c88ea9d0

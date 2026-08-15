@@ -1,6 +1,6 @@
 # Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write docs/config-catalog.md
-config-catalog.md: 382b2c535bdce00371e9d6888bf75fb1eaf212d8
-config-catalog.zh.md: 86b542ac50c76d42bc800bdd8f35ccdb1c50d5b3
+#   pnpm run verify-translation-pairing --write docs/cookbook/soym-quant.md
+soym-quant.md: 99871de2d23dbb75068f1c6cb3d462fb0ea1e454
+soym-quant.zh.md: b93099a04d612b2a1eb7a6ab1179d928cacec17a

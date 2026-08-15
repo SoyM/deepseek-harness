@@ -61,6 +61,16 @@
       - 'button "复制: 创造模式"':
         - img
         - text: 复制
+    - listitem:
+      - 'button "设为默认: SOYM 量化模式"':
+        - text: SOYM 量化模式 内置 面向 soym-wiki 量化系统的编码 Agent：标准模式全部能力 + SOYM persona 与 soym_commit 提交纪律工具（铁律9）。
+        - code: soym-quant
+      - 'button "查看: SOYM 量化模式"':
+        - img
+        - text: 查看
+      - 'button "复制: SOYM 量化模式"':
+        - img
+        - text: 复制
   - heading "自定义" [level=3]
   - list:
     - listitem:

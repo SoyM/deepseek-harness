@@ -37,6 +37,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-subagent-report` | `report` | `ctx.subagents`, `ctx.systemPrompt`, `a live continuable in-process child Agent` | `tool/call`, `tool/result`, `a user-role message in the direct parent session` | - | Registered per continuable in-process child rather than globally, so this schema is visible only inside such a child and survives its global `toolFilter`. The same contribution installs the child-scoped `tool:report` prompt section, which this catalog does not render. The parent-facing `send_message` tool is installed independently. |
 | `@deepseek-ai/dsh-tool-jobs` | `job_kill`, `job_list`, `job_output` | `ctx.tools`, `ctx.jobs`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `user/message via agent.inject() for background completion notices` | - | The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`. |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
+| `@deepseek-ai/dsh-soym-quant` | `soym_commit` | `ctx.tools`, `git on PATH`, `a git repository at the configured workspace` | `tool/call`, `tool/result` | - | soym_commit stages (`git add -A` or scoped `paths`) and commits the SOYM wiki workspace with the real git binary, enforcing the in-session commit discipline (铁律9). `workspace` is a required deployment config; the shipped `soym-quant` agent preset pins it to `process.cwd()`. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
@@ -1728,6 +1729,40 @@ Record and update a structured task list for the current work. Send the ENTIRE l
 Source: [`packages/todo/tool-todo/src/index.ts`](../packages/todo/tool-todo/src/index.ts)
 
 todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task.
+
+<a id="deepseek-aidsh-soym-quant"></a>
+
+## `@deepseek-ai/dsh-soym-quant`
+
+### `soym_commit`
+
+Commit pending changes in the SOYM wiki workspace as one git commit. Run it in the same session that made the changes: the SOYM operating rule (铁律9) requires code/test/config changes to be committed in-session — auto-commit only covers data artifacts and lets source changes pile up uncommitted. With no `paths`, the whole tree is staged (`git add -A`); pass `paths` to commit a subset. A commit with nothing staged reports committed=false instead of failing.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "Commit subject in imperative mood, e.g. \"fix: correct PIT backtest date window\"."
+    },
+    "paths": {
+      "type": "array",
+      "description": "Optional paths to stage instead of the whole tree (git add -- <paths>).",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "message"
+  ]
+}
+```
+
+Source: [`packages/soym/soym-quant/src/index.ts`](../packages/soym/soym-quant/src/index.ts)
+
+soym_commit stages (`git add -A` or scoped `paths`) and commits the SOYM wiki workspace with the real git binary, enforcing the in-session commit discipline (铁律9). `workspace` is a required deployment config; the shipped `soym-quant` agent preset pins it to `process.cwd()`.
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 
