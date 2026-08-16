@@ -381,7 +381,7 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     await expect.poll(() => page.getByText('Sessions', { exact: true }).count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(1)
     await expect.poll(() => page.getByText('Ungrouped', { exact: true }).count(), { timeout: 5_000 }).toBe(0)
     await expect.poll(() => page.locator('[role="treeitem"]').count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(1)
-    expect(await page.evaluate(() => localStorage.getItem('dsh.workspace.view.v5'))).toContain('flat')
+    expect(await page.evaluate(() => localStorage.getItem('dsh.workspace.view.v6'))).toContain('flat')
     // Persisted across reload; then restore grouped for inter-spec hygiene.
     const warningStart = tripwire.warnings.length
     await page.reload({ waitUntil: 'load' })
@@ -592,8 +592,13 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
     // The archived row must not resurface in the workspace tree (the Ungrouped
     // bucket itself may reappear if selection restore lands on another stray —
-    // not this test's concern); the bottom archived section owns it now.
+    // not this test's concern); the bottom archived section owns it now,
+    // collapsed by default until the header toggle is opened.
     expect(await page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count()).toBe(0)
+    const archivedToggle = page.getByRole('button', { name: /Archived/ })
+    await expect.poll(() => archivedToggle.count(), { timeout: 10_000 }).toBe(1)
+    expect(await archivedToggle.getAttribute('aria-expanded')).toBe('false')
+    await archivedToggle.click()
     expect(await page.getByRole('tree', { name: 'Archived' }).getByText(rowTitle, { exact: true }).count()).toBe(1)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)
@@ -609,9 +614,12 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     acknowledgeReloadConnectionLoss(tripwire, warningStart)
     await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
 
-    // The archived section surfaces the hidden row with its unarchive verb.
+    // The archived section header surfaces the hidden count; expand it to
+    // reach the row and its unarchive verb.
+    const archivedToggle = page.getByRole('button', { name: /Archived/ })
+    await archivedToggle.waitFor({ timeout: 10_000 })
+    await archivedToggle.click()
     const archivedTree = page.getByRole('tree', { name: 'Archived' })
-    await archivedTree.waitFor({ timeout: 10_000 })
     const archivedRow = archivedTree.locator('[role="treeitem"]')
       .filter({ has: page.locator('button[aria-label^="Session actions for "]') })
       .first()
@@ -622,7 +630,7 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     // The row returns to its workspace slot; the host set empties durably and
     // the section withdraws on the echo.
     await expect.poll(() => [...scaffold.ctx.workspaceRegistry.archivedSessionIds], { timeout: 10_000 }).toEqual([])
-    await expect.poll(() => page.getByRole('tree', { name: 'Archived' }).count(), { timeout: 10_000 }).toBe(0)
+    await expect.poll(() => page.getByRole('button', { name: /Archived/ }).count(), { timeout: 10_000 }).toBe(0)
     await expect.poll(() => page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count(), { timeout: 10_000 }).toBe(1)
 
     // Reload: the restored row survives from the workspace.list baseline.
@@ -631,7 +639,7 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     acknowledgeReloadConnectionLoss(tripwire, warningAfter)
     await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
-    expect(await page.getByRole('tree', { name: 'Archived' }).count()).toBe(0)
+    expect(await page.getByRole('button', { name: /Archived/ }).count()).toBe(0)
     expect(await page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count()).toBe(1)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)

@@ -14,7 +14,7 @@ The fork ships a complete unarchive round trip:
 
 - **Host**: `workspaceRegistry.unarchiveSession(sessionId)` removes the id from the durable `archivedSessionIds` set (idempotent for a non-member — the set is the only fact consulted, so no session existence check is needed). The new `workspace.unarchiveSession` RPC mirrors `archiveSession` (request `{ sessionId }`, response the full updated set) with no business-error path; the existing `host/archived-sessions-changed` frame fires automatically through the `domain/changed` listener, so clients already subscribed re-baseline without a new frame type.
 - **Client runtime**: `WorkspaceRuntime.unarchiveSession` mirrors `archiveSession` through the same manager echo-install path (`installArchived`), so the local unary echo, another tab's frame, and reconnect baselines all converge.
-- **UI**: archived rows become visible in a bottom **archived section** (`deriveArchived`: registry-archived sessions, subagent-origin and blank placeholders excluded, newest-first) rendered under the grouped tree and the flat list whenever the set is non-empty. Rows keep their hover affordances; the row menu offers only the **Unarchive session** verb (rename/fork/archive target visible sessions), dimmed via a dedicated row class. Search keeps excluding archived members.
+- **UI**: archived rows become visible in a bottom **archived section** (`deriveArchived`: registry-archived sessions, subagent-origin and blank placeholders excluded, newest-first) rendered under the grouped tree and the flat list whenever the set is non-empty. The section is **collapsed by default**; its header toggle (an `archivedExpanded` flag in the browser's persisted viewing store, shared across the grouped and flat surfaces) expands it. Expanded rows keep their hover affordances; the row menu offers only the **Unarchive session** verb (rename/fork/archive target visible sessions), dimmed via a dedicated row class. Search keeps excluding archived members.
 
 ## Alternatives considered
 
@@ -32,7 +32,7 @@ Keeps the workspace grouping intact but complicates every derivation (`deriveGro
 
 ## Consequences
 
-- The section appears only when the set is non-empty, so existing GUI snapshots and compositions without archived sessions are unchanged.
+- The section appears only when the set is non-empty and starts collapsed, so existing GUI snapshots and compositions without archived sessions are unchanged.
 - Opening an archived row still works (the session log is untouched); only grouping hides it.
 - Unarchiving is a no-op for non-members, so stale clients racing the set cannot fail the call.
 - The GUI-debt coverage exemption for `WorkspaceBrowser.tsx` means the section's render wiring is covered by component and browser e2e tests rather than per-file coverage; the derivation (`tree.ts`) and row menu (`Rows.tsx`) are fully covered.

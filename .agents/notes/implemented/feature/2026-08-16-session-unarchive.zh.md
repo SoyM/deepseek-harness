@@ -14,7 +14,7 @@ fork 交付完整的取消归档回路：
 
 - **Host**：`workspaceRegistry.unarchiveSession(sessionId)` 从持久化 `archivedSessionIds` 集合移除该 id（对非成员幂等——集合是唯一被考察的事实，无需会话存在性检查）。新增 `workspace.unarchiveSession` RPC 镜像 `archiveSession`（请求 `{ sessionId }`，响应完整更新后集合），无业务错误路径；既有的 `host/archived-sessions-changed` 帧经 `domain/changed` 监听自动触发，已订阅的客户端无需新帧类型即可重新基线化。
 - **客户端 runtime**：`WorkspaceRuntime.unarchiveSession` 镜像 `archiveSession`，走同一 manager 回声安装路径（`installArchived`），本地一元回声、其他标签页的帧与重连基线三者收敛。
-- **UI**：已归档行在底部**已归档区**可见（`deriveArchived`：注册表已归档会话，排除 subagent origin 与空白占位行，最新在前），集合非空时渲染在分组树与平铺列表之下。行保留悬停能力；行菜单只提供 **取消归档** 动词（重命名/fork/归档面向可见会话），并以专属行类调暗显示。搜索继续排除已归档成员。
+- **UI**：已归档行在底部**已归档区**可见（`deriveArchived`：注册表已归档会话，排除 subagent origin 与空白占位行，最新在前），集合非空时渲染在分组树与平铺列表之下。该区**默认折叠**；页头开关（浏览器持久 viewing store 里的 `archivedExpanded` 标志，分组与平铺两种界面共享）展开它。展开后的行保留悬停能力；行菜单只提供 **取消归档** 动词（重命名/fork/归档面向可见会话），并以专属行类调暗显示。搜索继续排除已归档成员。
 
 ## Alternatives considered
 
@@ -32,7 +32,7 @@ fork 交付完整的取消归档回路：
 
 ## Consequences
 
-- 集合为空时区不渲染，既有 GUI 快照与无归档会话的组合不受影响。
+- 集合为空时区不渲染且默认折叠，既有 GUI 快照与无归档会话的组合不受影响。
 - 打开已归档行仍然可用（会话日志未被触碰）；只有分组视图隐藏它。
 - 对非成员取消归档是无操作，与集合竞争的过期客户端不会调用失败。
 - `WorkspaceBrowser.tsx` 处于 GUI 覆盖率豁免列表，区渲染接线由组件与浏览器 e2e 测试覆盖而非逐文件覆盖率；派生（`tree.ts`）与行菜单（`Rows.tsx`）全覆盖。

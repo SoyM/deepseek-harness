@@ -13,7 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Button, IconCloseFill14, IconPersonalizationOutline16,
-  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Tooltip,
+  IconProjectAddOutline16, IconSearchOutline16, IconTriangleRightFill14, Menu, Modal, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionId, SessionListState, SessionSearchResultItem, WorkspaceId, WorkspaceView,
@@ -233,6 +233,10 @@ type SessionTreeProps = Pick<
   setSessionOrder: (accountKey: string, order: string[]) => void
   /** Registry-global archive set (hidden rows). */
   archivedSessionIds: readonly SessionNode['id'][]
+  /** Whether the bottom archived section is expanded. */
+  archivedExpanded: boolean
+  /** Expand or collapse the bottom archived section. */
+  setArchivedExpanded: (expanded: boolean) => void
   /** Open the browser-owned rename dialog for a real Workspace group. */
   onRenameRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
   /** Open the browser-owned delete-confirmation dialog for a real Workspace group. */
@@ -250,6 +254,7 @@ type SessionTreeProps = Pick<
 /** The scrolling session tree; unmounting drops the sessions subscription and expand-all state. */
 function SessionTree({
   useSessions, startSession, open, forkSession, workspaces, archivedSessionIds,
+  archivedExpanded, setArchivedExpanded,
   onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive, onSessionUnarchive,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
@@ -547,6 +552,8 @@ function SessionTree({
         rows={archivedRows}
         currentId={current}
         open={open}
+        expanded={archivedExpanded}
+        onToggle={() => { setArchivedExpanded(!archivedExpanded) }}
         onSessionUnarchive={onSessionUnarchive}
         t={t}
       />
@@ -558,6 +565,7 @@ function SessionTree({
 /** The flat "In one list" body: every session is one draggable top-level row. */
 function FlatList({
   useSessions, open, forkSession, onSessionRename, onSessionArchive, onSessionUnarchive, archivedSessionIds,
+  archivedExpanded, setArchivedExpanded,
   orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, t,
 }: Pick<
   SessionTreeProps,
@@ -568,6 +576,8 @@ function FlatList({
   | 'onSessionArchive'
   | 'onSessionUnarchive'
   | 'archivedSessionIds'
+  | 'archivedExpanded'
+  | 'setArchivedExpanded'
   | 'orderBy'
   | 'sessionOrderByAccount'
   | 'sessionUpdatedAtByAccount'
@@ -679,6 +689,8 @@ function FlatList({
         rows={archivedRows}
         currentId={list.current}
         open={open}
+        expanded={archivedExpanded}
+        onToggle={() => { setArchivedExpanded(!archivedExpanded) }}
         onSessionUnarchive={onSessionUnarchive}
         t={t}
       />
@@ -689,13 +701,18 @@ function FlatList({
 
 /**
  * The bottom archived-section: registry-archived sessions with an unarchive
- * row action. Shown under the grouped tree and the flat list alike whenever
- * the archive set holds rows; hidden rows stay out of every other surface.
+ * row action. Collapsed by default; the header toggle expands it. Shown under
+ * the grouped tree and the flat list alike whenever the archive set holds
+ * rows; hidden rows stay out of every other surface.
  */
-function ArchivedSection({ rows, currentId, open, onSessionUnarchive, t }: {
+function ArchivedSection({ rows, currentId, open, expanded, onToggle, onSessionUnarchive, t }: {
   rows: readonly SessionNode[]
   currentId: SessionId | undefined
   open: (id: SessionNode['id']) => void
+  /** Whether the section is expanded (store-backed, persisted). */
+  expanded: boolean
+  /** Toggle the section's expansion. */
+  onToggle: () => void
   onSessionUnarchive: (sessionId: SessionNode['id']) => void
   t: WorkspaceBrowserProps['t']
 }) {
@@ -703,24 +720,34 @@ function ArchivedSection({ rows, currentId, open, onSessionUnarchive, t }: {
   const now = Date.now()
   return (
     <div className={css.archivedSection} role="group" aria-label={t('section.archived')}>
-      <div className={css.archivedHeader}>
+      <button
+        type="button"
+        className={css.archivedHeader}
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        <span className={css.archivedArrow}>
+          <IconTriangleRightFill14 className={clsx(css.archivedArrowIcon, expanded && css.archivedArrowOpen)} />
+        </span>
         <span className={css.archivedLabel}>{t('section.archived')}</span>
         <span className={css.archivedCount}>{rows.length}</span>
-      </div>
-      <div className={css.archivedList} role="tree" aria-label={t('section.archived')}>
-        {rows.map(node => (
-          <SessionNodeItem
-            key={node.id}
-            node={node}
-            currentId={currentId}
-            now={now}
-            onOpen={open}
-            archived
-            onUnarchive={onSessionUnarchive}
-            t={t}
-          />
-        ))}
-      </div>
+      </button>
+      {expanded && (
+        <div className={css.archivedList} role="tree" aria-label={t('section.archived')}>
+          {rows.map(node => (
+            <SessionNodeItem
+              key={node.id}
+              node={node}
+              currentId={currentId}
+              now={now}
+              onOpen={open}
+              archived
+              onUnarchive={onSessionUnarchive}
+              t={t}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -828,6 +855,7 @@ export function WorkspaceBrowser({
   const workspaces = useWorkspaces(state => state.items)
   const workspacePhase = useWorkspaces(state => state.phase)
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
+  const archivedExpanded = useStore(s => s.archivedExpanded)
   // Live occupancy of this surface's directory-flow hole (the same source the
   // flow reads): a composition without a picking affordance can add nothing.
   const directoryFlowAvailable = useDirectoryFlow(occupied => occupied)
@@ -1198,6 +1226,8 @@ export function WorkspaceBrowser({
                 onSessionRename={onSessionRename} onSessionArchive={onSessionArchive}
                 onSessionUnarchive={onSessionUnarchive}
                 archivedSessionIds={archivedSessionIds}
+                archivedExpanded={archivedExpanded}
+                setArchivedExpanded={actions.setArchivedExpanded}
                 orderBy={orderBy}
                 sessionOrderByAccount={sessionOrderByAccount}
                 sessionUpdatedAtByAccount={sessionUpdatedAtByAccount}
@@ -1221,6 +1251,8 @@ export function WorkspaceBrowser({
                 syncSessionOrderAccount={actions.syncSessionOrderAccount}
                 setSessionOrder={actions.setSessionOrder}
                 archivedSessionIds={archivedSessionIds}
+                archivedExpanded={archivedExpanded}
+                setArchivedExpanded={actions.setArchivedExpanded}
                 startSession={startSession}
                 open={open}
                 insertWorkspaceBefore={insertWorkspaceBefore}

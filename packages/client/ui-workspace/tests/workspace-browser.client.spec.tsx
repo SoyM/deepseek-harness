@@ -328,13 +328,17 @@ describe('WorkspaceBrowser', () => {
     expect(archiveSession).toHaveBeenCalledWith(sid('gone-s'))
 
     // The archive-set echo moves the row to the bottom archived section, out
-    // of the workspace tree; grouped and flat modes agree.
+    // of the workspace tree; grouped and flat modes agree. The section is
+    // collapsed by default; the header toggle expands it.
     rerender(b, { useWorkspaces: hook(workspaceState([workspace('alpha', ['kept-s', 'gone-s'])], [sid('gone-s')])) })
     expect(within(screen.getByRole('tree', { name: '会话' })).queryByText('gone-s')).toBeNull()
+    expect(screen.queryByRole('tree', { name: '已归档' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /已归档/ }))
     expect(within(screen.getByRole('tree', { name: '已归档' })).getByText('gone-s')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
     expect(screen.getByText('kept-s')).toBeTruthy()
+    // The expansion lives in the shared store, so flat mode stays expanded.
     expect(within(screen.getByRole('tree', { name: '已归档' })).getByText('gone-s')).toBeTruthy()
   })
 
@@ -360,15 +364,19 @@ describe('WorkspaceBrowser', () => {
     }
   })
 
-  it('lists archived sessions in a bottom section and unarchives from the row menu in both modes', async () => {
+  it('lists archived sessions in a bottom section, collapsed by default, and unarchives from the row menu in both modes', async () => {
     const unarchiveSession = vi.fn(async () => {})
     const b = mount({
       useSessions: hook(sessionState([summary('kept-s', 2), summary('gone-s', 1)])),
       useWorkspaces: hook(workspaceState([workspace('alpha', ['kept-s', 'gone-s'])], [sid('gone-s')])),
       unarchiveSession,
     })
-    // The archived row sits under the 已归档 section header, out of every group.
-    expect(screen.getByText('已归档')).toBeTruthy()
+    // The section header shows the count while the rows stay collapsed.
+    expect(screen.getByRole('button', { name: /已归档/ }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('tree', { name: '已归档' })).toBeNull()
+    expect(screen.queryByText('gone-s')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /已归档/ }))
+    expect(screen.getByRole('button', { name: /已归档/ }).getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByText('gone-s')).toBeTruthy()
     expect(screen.queryByText('kept-s')).toBeNull()
 
@@ -385,14 +393,16 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getByText('gone-s')).toBeTruthy()
     b.view.unmount()
 
-    // Flat mode shows the same bottom section.
+    // Flat mode shows the same bottom section, still collapsed by default.
     mount({
       useSessions: hook(sessionState([summary('kept-s', 2), summary('gone-s', 1)])),
       useWorkspaces: hook(workspaceState([workspace('alpha', ['kept-s', 'gone-s'])], [sid('gone-s')])),
     })
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
-    expect(screen.getByText('已归档')).toBeTruthy()
+    // The expansion is persisted in the viewing store, so a fresh surface
+    // (and a reload) hydrates the open section without another toggle.
+    expect(screen.getByRole('button', { name: /已归档/ }).getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByText('gone-s')).toBeTruthy()
     expect(screen.getByText('kept-s')).toBeTruthy()
   })
@@ -407,6 +417,7 @@ describe('WorkspaceBrowser', () => {
         useWorkspaces: hook(workspaceState([], [sid('gone-s')])),
         unarchiveSession,
       })
+      fireEvent.click(screen.getByRole('button', { name: /已归档/ }))
       fireEvent.click(screen.getByRole('button', { name: '会话“gone-s”的操作' }))
       fireEvent.click(screen.getByRole('menuitem', { name: '取消归档' }))
       await Promise.resolve()
