@@ -8,6 +8,7 @@ A fork-local adaptation of the harness for the [soym-wiki](https://github.com/So
 
 - **`soym-quant` agent preset** ([`apps/cli/config/agent-presets/soym-quant/`](../../apps/cli/config/agent-presets/soym-quant/preset.yml)) — the full coding agent (same composition as `standard`) with a Chinese SOYM persona that pins the operating rules (RAG-first answering, signal layering, decision authorization, correction duty, the review gate, in-session commit discipline) and points at the workspace `AGENTS.md` for the full manual.
 - **`@deepseek-ai/dsh-soym-quant` package** ([`packages/soym/soym-quant/`](../../packages/soym/soym-quant/README.md)) — the model-facing `soym_commit` tool that stages (`git add -A` or scoped `paths`) and commits the workspace with the real git binary, enforcing the in-session commit rule (铁律9).
+- **`@deepseek-ai/dsh-soym-evolve` package** ([`packages/soym/soym-evolve/`](../../packages/soym/soym-evolve/README.md)) — the cross-session experience loop: `soym_learn` persists verified lessons into `.dsh/experience/` at session end, `soym_recall` injects them at the next session's start, so the system learns across sessions instead of re-learning every trap from scratch.
 
 ## Run from the fork
 
@@ -26,3 +27,5 @@ The preset rows resolve `@deepseek-ai/dsh-soym-quant` from the dsh app's depende
 ## Tool reference
 
 `soym_commit(message, paths?)` — see the [package README](../../packages/soym/soym-quant/README.md) for the schema, config fields (`workspace` required; `gitBin`, `timeoutMs`, `commitAll` defaulted), result shapes, and Model Experience.
+
+`soym_learn(category, title, body)` / `soym_recall(category?)` — see the [soym-evolve package README](../../packages/soym/soym-evolve/README.md). The experience journal lives at `.dsh/experience/` inside the workspace and is git-tracked by default.

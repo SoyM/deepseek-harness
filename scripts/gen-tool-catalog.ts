@@ -59,6 +59,7 @@ import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
 import * as SoymQuant from '@deepseek-ai/dsh-soym-quant'
+import * as SoymEvolve from '@deepseek-ai/dsh-soym-evolve'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
@@ -532,6 +533,20 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'soym_commit stages (`git add -A` or scoped `paths`) and commits the SOYM wiki workspace with the real git binary, enforcing the in-session commit discipline (铁律9). `workspace` is a required deployment config; the shipped `soym-quant` agent preset pins it to `process.cwd()`.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-soym-evolve',
+    dir: 'soym-evolve',
+    source: 'packages/soym/soym-evolve/src/index.ts',
+    requires: ['ctx.tools', 'a writable journal directory under the configured workspace'],
+    writes: ['tool/call', 'tool/result', 'workspace/.dsh/experience/YYYY-MM-DD.md'],
+    async mount(ctx) {
+      // `workspace` is required with no default; the catalog boots the tool
+      // against the generator-process working directory.
+      await ctx.plugin(SoymEvolve, { workspace: process.cwd() })
+    },
+    note:
+      'soym_learn appends one verified lesson to the git-tracked journal at `.dsh/experience/YYYY-MM-DD.md`; soym_recall reads the most recent `recallDays` daily files (optional category filter) so the next session starts on the previous session\'s shoulders. `workspace` is a required deployment config.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-workflow',

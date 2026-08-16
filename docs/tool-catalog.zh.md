@@ -40,6 +40,7 @@
 | `@deepseek-ai/dsh-tool-jobs` | `job_kill`、`job_list`、`job_output` | `ctx.tools`、`ctx.jobs`、`ctx.systemPrompt` | `tool/call`、`tool/result`、`user/message via agent.inject() for background completion notices` | - | 与任务种类无关的后台任务控制器：后台 bash 命令、PTY 发送和 subagent 都通过相同的 3 个工具读取、列出和终止。加载该插件会挂接控制器，从而启用生产方的 `ctx.jobs.start()`。 |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-soym-quant` | `soym_commit` | `ctx.tools`、`git on PATH`、`a git repository at the configured workspace` | `tool/call`、`tool/result` | - | soym_commit 用真实 git 二进制暂存（`git add -A` 或限定 `paths`）并提交 SOYM wiki 工作区，强制执行会话内提交纪律（铁律9）。`workspace` 是必填部署配置；随 fork 发布的 `soym-quant` agent preset 把它钉在 `process.cwd()`。 |
+| `@deepseek-ai/dsh-soym-evolve` | `soym_learn`、`soym_recall` | `ctx.tools`、`a writable journal directory under the configured workspace` | `tool/call`、`tool/result`、`workspace/.dsh/experience/YYYY-MM-DD.md` | - | soym_learn 把一条已验证经验追加到 git 追踪的日志 `.dsh/experience/YYYY-MM-DD.md`；soym_recall 读取最近 `recallDays` 个日文件（可选 category 过滤），让下一次会话站在上一次的肩膀上。`workspace` 是必填部署配置。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
 
@@ -1767,6 +1768,61 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/soym/soym-quant/src/index.ts`](../packages/soym/soym-quant/src/index.ts)
 
 soym_commit 用真实 git 二进制暂存（`git add -A` 或限定 `paths`）并提交 SOYM wiki 工作区，强制执行会话内提交纪律（铁律9）。`workspace` 是必填部署配置；随 fork 发布的 `soym-quant` agent preset 把它钉在 `process.cwd()`。
+
+<a id="deepseek-aidsh-soym-evolve"></a>
+
+## `@deepseek-ai/dsh-soym-evolve`
+
+### `soym_learn`
+
+把本会话的一条已验证经验持久化到 SOYM 经验日志（`.dsh/experience/`，git 追踪）。在会话结束（或非平凡发现之后）调用它：那些系统或未来会话不必重新踩坑才学到的东西——已验证的结论、避开的坑、决策及其原因、有效的参数。正文要具体可执行；宁可写"融合权重固定 0.67，regime 时变已被证伪"，也不要写"调了模型"。经验由 `soym_recall` 注入未来会话。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Category keyword, e.g. rag / backtest / process / data / framework."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short imperative or noun-phrase lesson title."
+    },
+    "body": {
+      "type": "string",
+      "description": "Specific, actionable lesson body with numbers and the reasoning."
+    }
+  },
+  "required": [
+    "category",
+    "title",
+    "body"
+  ]
+}
+```
+
+来源：[`packages/soym/soym-evolve/src/index.ts`](../packages/soym/soym-evolve/src/index.ts)
+
+### `soym_recall`
+
+读取 SOYM 经验日志（`.dsh/experience/`，git 追踪）中最近的经验，让本会话站在以往会话的肩膀上。在 SOYM wiki 会话开始时、回答投资或框架问题之前调用：日志里存着全新会话否则要重新踩坑才能学到的已验证结论、陷阱与流程经验。传 `category` 可过滤到单个领域（rag / backtest / process / data / ...）。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Optional category filter; when given, only lessons in that category are returned."
+    }
+  }
+}
+```
+
+来源：[`packages/soym/soym-evolve/src/index.ts`](../packages/soym/soym-evolve/src/index.ts)
+
+soym_learn 把一条已验证经验追加到 git 追踪的日志 `.dsh/experience/YYYY-MM-DD.md`；soym_recall 读取最近 `recallDays` 个日文件（可选 category 过滤），让下一次会话站在上一次的肩膀上。`workspace` 是必填部署配置。
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 

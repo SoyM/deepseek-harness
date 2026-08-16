@@ -38,6 +38,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-jobs` | `job_kill`, `job_list`, `job_output` | `ctx.tools`, `ctx.jobs`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `user/message via agent.inject() for background completion notices` | - | The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`. |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-soym-quant` | `soym_commit` | `ctx.tools`, `git on PATH`, `a git repository at the configured workspace` | `tool/call`, `tool/result` | - | soym_commit stages (`git add -A` or scoped `paths`) and commits the SOYM wiki workspace with the real git binary, enforcing the in-session commit discipline (铁律9). `workspace` is a required deployment config; the shipped `soym-quant` agent preset pins it to `process.cwd()`. |
+| `@deepseek-ai/dsh-soym-evolve` | `soym_learn`, `soym_recall` | `ctx.tools`, `a writable journal directory under the configured workspace` | `tool/call`, `tool/result`, `workspace/.dsh/experience/YYYY-MM-DD.md` | - | soym_learn appends one verified lesson to the git-tracked journal at `.dsh/experience/YYYY-MM-DD.md`; soym_recall reads the most recent `recallDays` daily files (optional category filter) so the next session starts on the previous session's shoulders. `workspace` is a required deployment config. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
@@ -1763,6 +1764,61 @@ Commit pending changes in the SOYM wiki workspace as one git commit. Run it in t
 Source: [`packages/soym/soym-quant/src/index.ts`](../packages/soym/soym-quant/src/index.ts)
 
 soym_commit stages (`git add -A` or scoped `paths`) and commits the SOYM wiki workspace with the real git binary, enforcing the in-session commit discipline (铁律9). `workspace` is a required deployment config; the shipped `soym-quant` agent preset pins it to `process.cwd()`.
+
+<a id="deepseek-aidsh-soym-evolve"></a>
+
+## `@deepseek-ai/dsh-soym-evolve`
+
+### `soym_learn`
+
+Persist one verified lesson from this session into the SOYM experience journal (`.dsh/experience/`, git-tracked). Call it at the END of a session (or after a non-trivial finding): something the system or a future session must not re-learn the hard way — a verified conclusion, a trap avoided, a decision and why, a parameter that worked. Keep the body specific and actionable; prefer "the fixed fusion weight is 0.67, regime time-vary was falsified" over "tuned the model". Lessons are injected into future sessions by `soym_recall`.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Category keyword, e.g. rag / backtest / process / data / framework."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short imperative or noun-phrase lesson title."
+    },
+    "body": {
+      "type": "string",
+      "description": "Specific, actionable lesson body with numbers and the reasoning."
+    }
+  },
+  "required": [
+    "category",
+    "title",
+    "body"
+  ]
+}
+```
+
+Source: [`packages/soym/soym-evolve/src/index.ts`](../packages/soym/soym-evolve/src/index.ts)
+
+### `soym_recall`
+
+Read the most recent lessons from the SOYM experience journal (`.dsh/experience/`, git-tracked) so this session starts on previous sessions' shoulders. Call it at the START of a session on the SOYM wiki, before answering investment or framework questions: the journal holds verified conclusions, traps, and process lessons a fresh session would otherwise re-learn the hard way. Pass `category` to filter to one area (rag / backtest / process / data / ...).
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "description": "Optional category filter; when given, only lessons in that category are returned."
+    }
+  }
+}
+```
+
+Source: [`packages/soym/soym-evolve/src/index.ts`](../packages/soym/soym-evolve/src/index.ts)
+
+soym_learn appends one verified lesson to the git-tracked journal at `.dsh/experience/YYYY-MM-DD.md`; soym_recall reads the most recent `recallDays` daily files (optional category filter) so the next session starts on the previous session's shoulders. `workspace` is a required deployment config.
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 

@@ -1901,6 +1901,28 @@ export interface Config {
 
 来源：[`packages/skill/skill-filesystem/src/index.ts:49`](../packages/skill/skill-filesystem/src/index.ts)
 
+<a id="deepseek-aidsh-soym-evolve"></a>
+
+## `@deepseek-ai/dsh-soym-evolve`
+
+需要：`tools`
+
+```ts config-catalog
+/** Plugin config: where the experience journal lives and how much recall returns. */
+export interface Config {
+  /** Repository root the experience journal lives under. Required — the SOYM workspace is deployment-specific. */
+  workspace: string
+  /** Journal directory relative to the workspace. Defaults to `.dsh/experience`. */
+  journalDir?: string
+  /** How many most-recent daily files `soym_recall` returns. Defaults to 7. */
+  recallDays?: number
+  /** Cap on the combined recall text returned to the model. Defaults to 6000 characters. */
+  maxRecallChars?: number
+}
+```
+
+来源：[`packages/soym/soym-evolve/src/index.ts:19`](../packages/soym/soym-evolve/src/index.ts)
+
 <a id="deepseek-aidsh-soym-quant"></a>
 
 ## `@deepseek-ai/dsh-soym-quant`

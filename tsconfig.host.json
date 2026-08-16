@@ -271,6 +271,7 @@
     { "path": "./packages/workflow/tool-ralph" },
     { "path": "./packages/todo/tool-todo" },
     { "path": "./packages/soym/soym-quant" },
+    { "path": "./packages/soym/soym-evolve" },
     { "path": "./packages/plan/plan-mode" },
     { "path": "./packages/preset/agent-presets" },
     { "path": "./packages/preset/persona" },

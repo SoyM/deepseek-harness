@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/cookbook/soym-quant.md
-soym-quant.md: 99871de2d23dbb75068f1c6cb3d462fb0ea1e454
-soym-quant.zh.md: b93099a04d612b2a1eb7a6ab1179d928cacec17a
+soym-quant.md: d1425dc0d2286c5cd6a53d9dd21055d72085a29a
+soym-quant.zh.md: dab784b3ca6f60f4d67211f40e5831f4016e294a
