@@ -228,6 +228,9 @@ importers:
       '@deepseek-ai/dsh-skill-filesystem':
         specifier: workspace:^
         version: link:../../packages/skill/skill-filesystem
+      '@deepseek-ai/dsh-soym-evolve':
+        specifier: workspace:^
+        version: link:../../packages/soym/soym-evolve
       '@deepseek-ai/dsh-soym-quant':
         specifier: workspace:^
         version: link:../../packages/soym/soym-quant
