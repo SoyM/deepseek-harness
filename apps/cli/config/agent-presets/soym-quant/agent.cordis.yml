@@ -260,13 +260,14 @@
 # The one SOYM-specific model-facing tool: stage and commit the workspace with
 # the real git binary, enforcing 铁律9 (code changes are committed in-session,
 # never left for auto-commit). It publishes no service, so it needs no realm —
-# same plane rule as `tool-bash` above. `workspace` defaults to the process
-# working directory, so running dsh from the soym-wiki checkout commits the
-# right repository without configuration.
+# same plane rule as `tool-bash` above. `workspace` resolves from `$DSH_CWD`
+# when set (so dsh can run from any checkout while the SOYM wiki workspace is
+# named explicitly), else the process working directory — so running dsh from
+# the soym-wiki checkout still commits the right repository without config.
 - id: tool-soym-commit
   name: '@deepseek-ai/dsh-soym-quant'
   config:
-    workspace: !!js process.cwd()
+    workspace: !!js process.env.DSH_CWD ?? process.cwd()
 
 # ── remaining model-facing rows ─────────────────────────────────────────────
 

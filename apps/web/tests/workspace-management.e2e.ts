@@ -5,12 +5,13 @@
 // trip over the real wire (workspace.rename RPC + durable registry), the
 // duplicate-name pre-check, the
 // flat "In one list" view with its persisted group-by preference, the session
-// hover card and row action menu, and the session archive round trip (row
-// menu → workspace.archiveSession RPC → durable global set → row hidden
-// across reload). Zero model calls: workspace.create/rename/archiveSession
-// are host RPCs with no model involvement, and the one session row the
-// flat/hover/menu/archive scenarios need comes from a seeded fixture (the
-// seeded-history seed reused verbatim — no new recording).
+// hover card and row action menu, and the session archive/unarchive round
+// trips (row menu → workspace.archiveSession / unarchiveSession RPC → durable
+// global set → row hidden in / restored from the archived section, across
+// reload). Zero model calls: workspace.create/rename/archiveSession/
+// unarchiveSession are host RPCs with no model involvement, and the one
+// session row the flat/hover/menu/archive scenarios need comes from a seeded
+// fixture (the seeded-history seed reused verbatim — no new recording).
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join, sep } from 'node:path'
@@ -589,10 +590,49 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     acknowledgeReloadConnectionLoss(tripwire, warningStart)
     await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
-    // The archived row must not resurface (the Ungrouped bucket itself may
-    // reappear if selection restore lands on another stray — not this test's
-    // concern).
-    expect(await page.getByText(rowTitle, { exact: true }).count()).toBe(0)
+    // The archived row must not resurface in the workspace tree (the Ungrouped
+    // bucket itself may reappear if selection restore lands on another stray —
+    // not this test's concern); the bottom archived section owns it now.
+    expect(await page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count()).toBe(0)
+    expect(await page.getByRole('tree', { name: 'Archived' }).getByText(rowTitle, { exact: true }).count()).toBe(1)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 90_000)
+
+  it('unarchives the seeded session from the archived section, restoring it durably', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-ws-unarchive'))
+    // Start from the hidden state: the archive round trip is the previous
+    // scenario, so this one pre-archives host-side and reloads.
+    await scaffold.ctx.workspaceRegistry.archiveSession(SessionId(SEED_ID))
+    const warningStart = tripwire.warnings.length
+    await page.reload({ waitUntil: 'load' })
+    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    acknowledgeReloadConnectionLoss(tripwire, warningStart)
+    await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
+
+    // The archived section surfaces the hidden row with its unarchive verb.
+    const archivedTree = page.getByRole('tree', { name: 'Archived' })
+    await archivedTree.waitFor({ timeout: 10_000 })
+    const archivedRow = archivedTree.locator('[role="treeitem"]')
+      .filter({ has: page.locator('button[aria-label^="Session actions for "]') })
+      .first()
+    const rowTitle = await archivedRow.locator('[class*="title"]').innerText()
+    await clickHoverAction(archivedRow, `Session actions for ${rowTitle}`)
+    await page.getByRole('menuitem', { name: 'Unarchive session' }).click()
+
+    // The row returns to its workspace slot; the host set empties durably and
+    // the section withdraws on the echo.
+    await expect.poll(() => [...scaffold.ctx.workspaceRegistry.archivedSessionIds], { timeout: 10_000 }).toEqual([])
+    await expect.poll(() => page.getByRole('tree', { name: 'Archived' }).count(), { timeout: 10_000 }).toBe(0)
+    await expect.poll(() => page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count(), { timeout: 10_000 }).toBe(1)
+
+    // Reload: the restored row survives from the workspace.list baseline.
+    const warningAfter = tripwire.warnings.length
+    await page.reload({ waitUntil: 'load' })
+    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    acknowledgeReloadConnectionLoss(tripwire, warningAfter)
+    await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 15_000 }).toBe(1)
+    expect(await page.getByRole('tree', { name: 'Archived' }).count()).toBe(0)
+    expect(await page.getByRole('tree', { name: 'Sessions' }).getByText(rowTitle, { exact: true }).count()).toBe(1)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)
 

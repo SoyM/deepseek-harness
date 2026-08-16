@@ -273,6 +273,29 @@ export function deriveGroups(
 }
 
 /**
+ * Collect list rows passing `visible` as top-level session nodes, newest-first.
+ * Shared by the flat list and the archived section, which differ only in the
+ * membership predicate.
+ * @param list - sessions list snapshot.
+ * @param visible - per-row membership filter.
+ * @returns rows in render order.
+ */
+function orderedSessionNodes(
+  list: SessionListState,
+  visible: (s: SessionSummary) => boolean,
+): SessionNode[] {
+  const descendants = indexSubagentDescendants(list.byId)
+  const rows: SessionSummary[] = []
+  for (const id of list.ids) {
+    const s = list.byId[id]
+    if (s === undefined || !visible(s)) continue
+    rows.push(s)
+  }
+  rows.sort(byRecency)
+  return rows.map(session => sessionNode(session, descendants))
+}
+
+/**
  * Derive the flat session list ("In one list" mode): every session — fork
  * children included — as a top-level row, strictly newest-first. No grouping,
  * no parent/child adjacency. Content search lives outside this derivation
@@ -286,15 +309,28 @@ export function deriveFlat(
   archivedSessionIds: readonly SessionId[],
 ): SessionNode[] {
   const archived = new Set(archivedSessionIds)
-  const descendants = indexSubagentDescendants(list.byId)
-  const rows: SessionSummary[] = []
-  for (const id of list.ids) {
-    const s = list.byId[id]
-    if (s === undefined || !sessionVisible(s, list.current, archived)) continue
-    rows.push(s)
-  }
-  rows.sort(byRecency)
-  return rows.map(session => sessionNode(session, descendants))
+  return orderedSessionNodes(list, s => sessionVisible(s, list.current, archived))
+}
+
+/**
+ * Derive the archived-session section rows: every registry-archived session —
+ * subagent children and blank placeholders excluded — newest-first. The rows
+ * carry no workspace grouping; the renderer shows the section under the tree
+ * and flat list alike, and the row menu's unarchive action restores each
+ * session to its original workspace slot.
+ * @param list - sessions list snapshot.
+ * @param archivedSessionIds - registry-global archive set.
+ * @returns archived rows in render order.
+ */
+export function deriveArchived(
+  list: SessionListState,
+  archivedSessionIds: readonly SessionId[],
+): SessionNode[] {
+  const archived = new Set(archivedSessionIds)
+  return orderedSessionNodes(
+    list,
+    s => archived.has(s.id) && s.origin !== 'subagent' && !s.blank,
+  )
 }
 
 /** Relative-time bucket of a session row's trailing label. */

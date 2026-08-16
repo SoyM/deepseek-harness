@@ -3,7 +3,7 @@ import type {
   SessionId, SessionListState, SessionSummary, WorkspaceId, WorkspaceView,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import {
-  deriveFlat, deriveGroups, deriveSearchResults, workspaceLabel, relativeTime,
+  deriveArchived, deriveFlat, deriveGroups, deriveSearchResults, workspaceLabel, relativeTime,
   UNGROUPED_KEY, UNGROUPED_LABEL,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
@@ -248,6 +248,26 @@ describe('deriveFlat', () => {
     const kept = summary('kept', 1)
     const gone = summary('gone', 2)
     expect(deriveFlat(list(kept, gone), archived('gone')).map(row => row.id)).toEqual([kept.id])
+  })
+})
+
+describe('deriveArchived', () => {
+  it('lists archived sessions newest-first, excluding subagent origin and blank placeholders', () => {
+    const older = summary('older', 1)
+    const newer = summary('newer', 3)
+    const blank = { ...summary('blank', 4), blank: true }
+    const subagent = { ...summary('child', 5), parentId: older.id, origin: 'subagent' as const }
+    const kept = summary('kept', 2)
+    const rows = deriveArchived(
+      list(older, newer, blank, subagent, kept),
+      archived('newer', 'older', 'blank', 'child', 'ghost'),
+    )
+    expect(rows.map(row => row.id)).toEqual([sid('newer'), sid('older')])
+  })
+
+  it('returns an empty list when the archive set is empty or unknown', () => {
+    expect(deriveArchived(list(summary('kept', 1)), noArchive)).toEqual([])
+    expect(deriveArchived(list(summary('kept', 1)), archived('ghost'))).toEqual([])
   })
 })
 

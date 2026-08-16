@@ -121,6 +121,12 @@
   margin-left: 0;
 }
 
+/* Archived-section rows: dimmed so the hidden state reads at a glance while
+   the row stays fully interactive (open + unarchive). */
+.archivedSessionRow {
+  opacity: 0.6;
+}
+
 @keyframes row-in {
   from { opacity: 0; }
 }

@@ -454,6 +454,39 @@
   font-size: 13px;
 }
 
+/* Archived sessions footer: registry-archived rows live outside the scrolling
+   tree so they stay reachable while the visible session list scrolls. */
+.archivedSection {
+  flex: none;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  padding: 4px 0 8px;
+}
+
+.archivedHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 2px;
+}
+
+.archivedLabel {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.archivedCount {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.archivedList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* Rename dialog form (same figma dialog family as the create modals). */
 .renameInput {
   box-sizing: border-box;
