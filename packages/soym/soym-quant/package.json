@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-soym-quant",
   "description": "Model-facing soym_commit tool enforcing the SOYM wiki commit discipline over git",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.7",
   "publishConfig": {
     "access": "public"
   },
