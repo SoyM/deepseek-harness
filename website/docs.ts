@@ -392,6 +392,7 @@ const reference = [
     ['adding-a-package.md', '新增 Package', 'Adding a package'],
     ['adding-a-tool.md', '新增 Tool', 'Adding a tool'],
     ['adding-an-llm-adapter.md', '新增 LLM Adapter', 'Adding an LLM adapter'],
+    ['adding-a-settings-card.md', '新增设置卡片', 'Adding a settings card'],
     ['extension-cookbook.md', '扩展模式', 'Extension patterns'],
     ['soym-quant.md', 'SOYM 量化适配', 'SOYM quant adaptation'],
   ] as const).map(([file, rootLabel, enLabel], order): PairedPage => ({
