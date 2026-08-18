@@ -13,6 +13,19 @@ import * as tool from '../src/index.ts'
 
 let root: string | undefined
 
+/**
+ * ISO local date `days` before today. Recall windows are computed from the
+ * real clock, so journal fixtures must be relative to today — hardcoded dates
+ * drift out of the window as time passes.
+ */
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
 afterEach(async () => {
   if (root !== undefined) await rm(root, { recursive: true, force: true })
   root = undefined
@@ -126,7 +139,7 @@ describe('dsh-soym-evolve', () => {
     // Two day files: an older one written directly, a newer one via the tool.
     const dir = join(root, '.dsh', 'experience')
     await mkdir(dir, { recursive: true })
-    await writeFile(join(dir, '2026-08-10.md'), [
+    await writeFile(join(dir, `${isoDaysAgo(1)}.md`), [
       '## [rag] old lesson',
       '',
       'old body',
@@ -167,7 +180,7 @@ describe('dsh-soym-evolve', () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-soym-evolve-'))
     const dir = join(root, '.dsh', 'experience')
     await mkdir(dir, { recursive: true })
-    await writeFile(join(dir, '2026-08-10.md'), '## [rag] old\n\nbody\n', 'utf8')
+    await writeFile(join(dir, `${isoDaysAgo(3)}.md`), '## [rag] old\n\nbody\n', 'utf8')
     const ctx = await setup({ workspace: root, recallDays: 1 })
     const result = await callTool(ctx, 'soym_recall', {})
     if (result.isError) throw new Error('expected success')
@@ -189,7 +202,7 @@ describe('dsh-soym-evolve', () => {
     const dir = join(root, '.dsh', 'experience')
     await mkdir(dir, { recursive: true })
     // 窗口内条目是目录：readFile 抛错 → catch 返回空串，不崩
-    await mkdir(join(dir, '2026-08-10.md'))
+    await mkdir(join(dir, `${isoDaysAgo(0)}.md`))
     const ctx = await setup({ workspace: root, recallDays: 7 })
     const result = await callTool(ctx, 'soym_recall', {})
     expect(result.isError).toBe(false)
@@ -201,14 +214,17 @@ describe('dsh-soym-evolve', () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-soym-evolve-'))
     const dir = join(root, '.dsh', 'experience')
     await mkdir(dir, { recursive: true })
-    await writeFile(join(dir, '2026-08-11.md'), '## [rag] middle\n\nbody m\n', 'utf8')
-    await writeFile(join(dir, '2026-08-10.md'), '## [rag] oldest\n\nbody o\n', 'utf8')
-    await writeFile(join(dir, '2026-08-12.md'), '## [rag] newest\n\nbody n\n', 'utf8')
+    const newest = isoDaysAgo(0)
+    const middle = isoDaysAgo(1)
+    const oldest = isoDaysAgo(2)
+    await writeFile(join(dir, `${middle}.md`), '## [rag] middle\n\nbody m\n', 'utf8')
+    await writeFile(join(dir, `${oldest}.md`), '## [rag] oldest\n\nbody o\n', 'utf8')
+    await writeFile(join(dir, `${newest}.md`), '## [rag] newest\n\nbody n\n', 'utf8')
     const ctx = await setup({ workspace: root, recallDays: 7 })
     const result = await callTool(ctx, 'soym_recall', {})
     if (result.isError) throw new Error('expected success')
     const value = result.value as unknown as tool.RecallOutput
-    expect(value.lessons.map(l => l.date)).toEqual(['2026-08-12', '2026-08-11', '2026-08-10'])
+    expect(value.lessons.map(l => l.date)).toEqual([newest, middle, oldest])
   })
 
   it('presents learn and recall calls with stable views', async () => {
