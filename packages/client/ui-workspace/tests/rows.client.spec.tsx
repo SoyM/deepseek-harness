@@ -238,6 +238,59 @@ describe('workspace browser rows', () => {
     expect(screen.getByText('1 个子代理运行中')).toBeTruthy()
   })
 
+  it('badges live background jobs on an otherwise idle session row', () => {
+    const node: SessionNode = {
+      id: sid('s1'), title: 'Jobful', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, updatedAt: 0,
+    }
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={2} t={t} />)
+    const row = screen.getByRole('treeitem')
+    // The jobs count is the only live activity, so it wins the status slot.
+    expect(row.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(screen.getByText('2 个后台任务运行中')).toBeTruthy()
+    expect(screen.queryByText('进行中')).toBeNull()
+    expect(row.querySelectorAll('[data-state]')).toHaveLength(1)
+  })
+
+  it('keeps background jobs secondary while the session itself is running', () => {
+    vi.useFakeTimers()
+    try {
+      const node: SessionNode = {
+        id: sid('s1'), title: 'Busy', blank: false, running: true,
+        runningSubagentCount: 0, completed: false, updatedAt: 0,
+      }
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={1} t={t} />)
+      const row = screen.getByRole('treeitem')
+      // One dot only — the primary running state; the jobs label stays readable.
+      expect(row.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
+      expect(screen.getByText('进行中')).toBeTruthy()
+      expect(screen.getByText('1 个后台任务运行中')).toBeTruthy()
+
+      fireEvent.pointerEnter(row.parentElement as HTMLElement)
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(screen.getAllByText('进行中')).toHaveLength(2)
+      expect(screen.getAllByText('1 个后台任务运行中')).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('ranks pending interaction ahead of live background jobs', () => {
+    const node: SessionNode = {
+      id: sid('s1'), title: 'Needs input', blank: false, pendingInteraction: 'approval',
+      running: false, runningSubagentCount: 0, completed: false, updatedAt: 0,
+    }
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={3} t={t} />)
+    const row = screen.getByRole('treeitem')
+    expect(row.querySelector('[data-state="warning"]')).not.toBeNull()
+    expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
+    expect(screen.getByText('等待审批')).toBeTruthy()
+    expect(screen.getByText('3 个后台任务运行中')).toBeTruthy()
+  })
+
   it('shows the green done dot on a finished search result row', () => {
     render(<SearchResultItem
       result={{

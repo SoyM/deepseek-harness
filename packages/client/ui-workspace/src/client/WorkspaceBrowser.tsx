@@ -76,6 +76,24 @@ function useNativeDragAcceptance(active: boolean): void {
   }, [active])
 }
 
+/** Live background-job counts per session id (running or stopping only). */
+type LiveJobsBySession = ReadonlyMap<string, number>
+
+/**
+ * Fold the runtime's global `jobsBySession` mirror into per-session live
+ * counts. Settled jobs (completed/killed/failed) never badge a row: the mirror
+ * keeps them only until their session's next baseline, and a finished task is
+ * not an affordance the browsing list should advertise.
+ */
+function foldLiveJobs(jobsBySession: SessionListState['jobsBySession']): LiveJobsBySession {
+  const counts = new Map<string, number>()
+  for (const [id, jobs] of Object.entries(jobsBySession)) {
+    const live = jobs.filter(job => job.status === 'running' || job.status === 'stopping').length
+    if (live > 0) counts.set(id, live)
+  }
+  return counts
+}
+
 /** Reconcile a stored view order with the Workspace's current session account. */
 function reconciledSessionOrder(sessionIds: readonly SessionId[], stored: readonly string[] | undefined): SessionId[] {
   if (stored === undefined) return [...sessionIds]
@@ -262,6 +280,7 @@ function SessionTree({
 }: SessionTreeProps) {
   const list = useSessions(s => s)
   const current = list.current
+  const liveJobsBySession = useMemo(() => foldLiveJobs(list.jobsBySession), [list.jobsBySession])
   const [expandedSessionGroups, setExpandedSessionGroups] = useState<string[]>([])
   // Transient drag marker state; the selected mode owns the resulting order.
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -527,6 +546,7 @@ function SessionTree({
                     onRename={onSessionRename}
                     onFork={forkSession}
                     onArchive={onSessionArchive}
+                    liveJobs={liveJobsBySession.get(node.id) ?? 0}
                     drag={dragProps}
                     t={t}
                   />
@@ -586,6 +606,7 @@ function FlatList({
   | 't'
 >) {
   const list = useSessions(s => s)
+  const liveJobsBySession = useMemo(() => foldLiveJobs(list.jobsBySession), [list.jobsBySession])
   const baseRows = useMemo(
     () => deriveFlat(list, archivedSessionIds),
     [list, archivedSessionIds],
@@ -661,6 +682,7 @@ function FlatList({
               onFork={forkSession}
               onArchive={onSessionArchive}
               flat
+              liveJobs={liveJobsBySession.get(node.id) ?? 0}
               drag={{
                 start: () => {
                   dropCommitted.current = false

@@ -215,14 +215,30 @@ interface SessionStatus {
   label: string
 }
 
+/** Prepend the primary status to its secondary tail as one tuple. */
+function withPrimary(primary: SessionStatus, rest: readonly SessionStatus[]): readonly [SessionStatus, ...SessionStatus[]] {
+  return rest.length === 0 ? [primary] : [primary, ...rest]
+}
+
 /**
  * Session status presentation; pending interaction is primary and live activity
- * outranks completion reminders.
+ * outranks completion reminders. Live activity covers own turns, descendant
+ * subagents, and this session's running background jobs.
  */
 function sessionStatuses(
   node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>,
   t: RowTranslate,
+  liveJobs = 0,
 ): readonly [SessionStatus, ...SessionStatus[]] {
+  const jobs: SessionStatus | undefined = liveJobs === 0
+    ? undefined
+    : {
+      state: 'ongoing',
+      label: t(
+        liveJobs === 1 ? 'status.jobsRunning.one' : 'status.jobsRunning.other',
+        { n: liveJobs },
+      ),
+    }
   const subagents: SessionStatus | undefined = node.runningSubagentCount === 0
     ? undefined
     : {
@@ -234,6 +250,12 @@ function sessionStatuses(
         { n: node.runningSubagentCount },
       ),
     }
+  // Activity statuses share one secondary rank; subagents keep their historical
+  // lead over background jobs so existing hover orderings are stable.
+  const activity: readonly SessionStatus[] = [
+    ...(subagents === undefined ? [] : [subagents]),
+    ...(jobs === undefined ? [] : [jobs]),
+  ]
   let pending: SessionStatus | undefined
   switch (node.pendingInteraction) {
     case 'approval':
@@ -249,12 +271,13 @@ function sessionStatuses(
     /* v8 ignore next -- closed PendingInteractionStatus union */
     default: return assertNever(node.pendingInteraction)
   }
-  if (pending !== undefined) return subagents === undefined ? [pending] : [pending, subagents]
+  if (pending !== undefined) return withPrimary(pending, activity)
   if (node.running) {
     const primary: SessionStatus = { state: 'ongoing', label: t('status.running') }
-    return subagents === undefined ? [primary] : [primary, subagents]
+    return withPrimary(primary, activity)
   }
-  if (subagents !== undefined) return [subagents]
+  const lead = activity[0]
+  if (lead !== undefined) return withPrimary(lead, activity.slice(1))
   if (node.completed) return [{ state: 'done', label: t('status.completed') }]
   return [{ state: 'done', label: t('status.idle') }]
 }
@@ -272,8 +295,8 @@ function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ..
 }
 
 /** Hover-card body: full title, relative time, and every relevant live status. */
-function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number; t: RowTranslate }) {
-  const statuses = sessionStatuses(node, t)
+function SessionHoverContent({ node, now, liveJobs, t }: { node: SessionNode; now: number; liveJobs: number; t: RowTranslate }) {
+  const statuses = sessionStatuses(node, t, liveJobs)
   return (
     <div className={css.hoverContent}>
       <div className={css.hoverTitle}>{displayTitle(node, t)}</div>
@@ -351,12 +374,15 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @param props.onUnarchive - unarchive an archived session by id.
  * @param props.drag - optional draggable-row wiring.
  * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
+ * @param props.liveJobs - this session's live background-job count (running or
+ *   stopping); zero (the default) renders no job status. Archived rows stay at
+ *   the default: the archived section is inactive by definition.
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
 export function SessionNodeItem({
   node, currentId, now, onOpen, onRename, onFork, onArchive,
-  archived = false, onUnarchive, drag, flat = false, t,
+  archived = false, onUnarchive, drag, flat = false, liveJobs = 0, t,
 }: {
   node: SessionNode
   currentId: string | undefined
@@ -370,18 +396,20 @@ export function SessionNodeItem({
   onArchive?: ((id: SessionNode['id']) => void) | undefined
   /** The row lives in the archived section (dimmed, unarchive-only menu). */
   archived?: boolean | undefined
-  /** Unarchive this session (row menu action; commits without a dialog). */
+  /** Unarchive an archived session by id. */
   onUnarchive?: ((id: SessionNode['id']) => void) | undefined
   /** Present only on draggable rows (workspace-group sessions outside search). */
   drag?: RowDragProps | undefined
   /** The row is rendered without a parent Workspace header. */
   flat?: boolean | undefined
+  /** Live background-job count folded from the runtime's jobs mirror. */
+  liveJobs?: number | undefined
   t: RowTranslate
 }) {
   const row = node
   const title = displayTitle(node, t)
   const selected = node.id === currentId
-  const statuses = sessionStatuses(node, t)
+  const statuses = sessionStatuses(node, t, liveJobs)
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
@@ -482,7 +510,7 @@ export function SessionNodeItem({
   return (
     <HoverCard
       anchor={ownRow}
-      content={<SessionHoverContent node={node} now={now} t={t} />}
+      content={<SessionHoverContent node={node} now={now} liveJobs={liveJobs} t={t} />}
       disabled={menuOpen || drag?.active === true}
       copyText={row.blank ? undefined : row.title}
       copyLabel={t('copy')}
