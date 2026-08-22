@@ -1,13 +1,15 @@
 // StateDot: session state indicator (figma nodes 14:3303/3305/3312, 122:9182).
 // done/warning/error: 10x10 halo (same color, 10% opacity) around a 6x6 solid
 // core. ongoing: a pixel-art chase — the 8 outer cells of a 3x3 matrix light
-// up clockwise with a stepped trail. Colors resolve through --dsw-* tokens only.
+// up clockwise with a stepped trail. background: the same ring held still —
+// motion means the loop is running; a still ring is work parked in the
+// background. Colors resolve through --dsw-* tokens only.
 
 import clsx from 'clsx'
 import css from './StateDot.module.css'
 
-/** Four-color state semantic (green done / amber user-attention / blue running ring / red error). */
-export type StateDotState = 'done' | 'warning' | 'ongoing' | 'error'
+/** Five-color state semantic (green done / amber user-attention / blue running ring / red error / blue still ring). */
+export type StateDotState = 'done' | 'warning' | 'ongoing' | 'error' | 'background'
 
 /** Outer 3x3 matrix cells (2px pixels on a 10px grid), clockwise from top-left. */
 const MATRIX_CELLS: readonly (readonly [number, number])[] = [
@@ -16,7 +18,7 @@ const MATRIX_CELLS: readonly (readonly [number, number])[] = [
 
 /**
  * Render a state dot.
- * @param props.state - which of the four states to show.
+ * @param props.state - which of the five states to show.
  * @param props.size - outer diameter in px (default 10, the figma size).
  * @param props.className - extra class for layout placement.
  * @returns the dot element (aria-hidden; pair with text for accessibility).
@@ -26,11 +28,14 @@ export function StateDot({ state, size = 10, className }: {
   size?: number | undefined
   className?: string | undefined
 }) {
-  if (state === 'ongoing') {
+  if (state === 'ongoing' || state === 'background') {
+    // The chase animates only for the running loop; background work holds the
+    // same ring still so the two read apart without a second color.
+    const chasing = state === 'ongoing'
     return (
       <svg
         className={clsx(css.matrix, className)}
-        data-state="ongoing"
+        data-state={state}
         width={size}
         height={size}
         viewBox="0 0 10 10"
@@ -40,13 +45,13 @@ export function StateDot({ state, size = 10, className }: {
         {MATRIX_CELLS.map(([x, y], index) => (
           <rect
             key={`${x}-${y}`}
-            className={css.cell}
+            className={chasing ? css.cell : css.cellStatic}
             x={x}
             y={y}
             width="2"
             height="2"
             /* Negative delay phases the chase so every cell animates from mount. */
-            style={{ animationDelay: `${(index - MATRIX_CELLS.length) * 125}ms` }}
+            style={chasing ? { animationDelay: `${(index - MATRIX_CELLS.length) * 125}ms` } : undefined}
           />
         ))}
       </svg>

@@ -246,8 +246,10 @@ describe('workspace browser rows', () => {
     render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={2} t={t} />)
     const row = screen.getByRole('treeitem')
-    // The jobs count is the only live activity, so it wins the status slot.
-    expect(row.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    // The jobs count is the only live activity: the STILL ring (background),
+    // not the animated chase (ongoing) that marks a running agent loop.
+    expect(row.querySelector('[data-state="background"]')).not.toBeNull()
+    expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
     expect(screen.getByText('2 个后台任务运行中')).toBeTruthy()
     expect(screen.queryByText('进行中')).toBeNull()
     expect(row.querySelectorAll('[data-state]')).toHaveLength(1)
@@ -263,8 +265,10 @@ describe('workspace browser rows', () => {
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={1} t={t} />)
       const row = screen.getByRole('treeitem')
-      // One dot only — the primary running state; the jobs label stays readable.
+      // Row shows one dot only — the primary running chase; the still-ring
+      // jobs status stays a hidden label until the hover card opens.
       expect(row.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
+      expect(row.querySelector('[data-state="background"]')).toBeNull()
       expect(screen.getByText('进行中')).toBeTruthy()
       expect(screen.getByText('1 个后台任务运行中')).toBeTruthy()
 
@@ -272,6 +276,7 @@ describe('workspace browser rows', () => {
       act(() => { vi.advanceTimersByTime(500) })
       expect(screen.getAllByText('进行中')).toHaveLength(2)
       expect(screen.getAllByText('1 个后台任务运行中')).toHaveLength(2)
+      expect(document.querySelector('[data-state="background"]')).not.toBeNull()
     } finally {
       vi.useRealTimers()
     }
@@ -286,6 +291,7 @@ describe('workspace browser rows', () => {
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} liveJobs={3} t={t} />)
     const row = screen.getByRole('treeitem')
     expect(row.querySelector('[data-state="warning"]')).not.toBeNull()
+    expect(row.querySelector('[data-state="background"]')).toBeNull()
     expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
     expect(screen.getByText('等待审批')).toBeTruthy()
     expect(screen.getByText('3 个后台任务运行中')).toBeTruthy()

@@ -7,7 +7,7 @@ import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 afterEach(cleanup)
 
 describe('StateDot', () => {
-  it.each(['done', 'warning', 'ongoing', 'error'] as const)('renders state %s as data-state', (state) => {
+  it.each(['done', 'warning', 'ongoing', 'error', 'background'] as const)('renders state %s as data-state', (state) => {
     const { container } = render(<StateDot state={state} />)
     const dot = container.firstElementChild as HTMLElement
     expect(dot.dataset['state']).toBe(state)
@@ -25,6 +25,17 @@ describe('StateDot', () => {
     // Chase phase: every cell carries its own negative animation delay.
     const delays = [...cells].map(cell => (cell).style.animationDelay)
     expect(new Set(delays).size).toBe(8)
+  })
+
+  it('background is the ring held still: same matrix, no chase delays', () => {
+    const { container, rerender } = render(<StateDot state="ongoing" />)
+    rerender(<StateDot state="background" />)
+    const matrix = container.firstElementChild as SVGSVGElement
+    expect(matrix.dataset['state']).toBe('background')
+    expect(matrix.tagName).toBe('svg')
+    const cells = matrix.querySelectorAll('rect')
+    expect(cells).toHaveLength(8)
+    for (const cell of cells) expect(cell.style.animationDelay).toBe('')
   })
 
   it('sizes via the size prop in both shapes', () => {

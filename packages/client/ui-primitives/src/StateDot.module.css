@@ -57,6 +57,14 @@
   animation: dsh-state-dot-chase 1s infinite;
 }
 
+/* Background jobs: the same ring, held still — motion means the loop is
+ * running, a still ring is work parked in the background. Steady at the
+ * chase's peak brightness so it reads as lit rather than faded out. */
+.cellStatic {
+  fill: currentColor;
+  opacity: 1;
+}
+
 @keyframes dsh-state-dot-chase {
   0%, 12.4% { opacity: 1; }
   12.5%, 24.9% { opacity: 0.6; }

@@ -233,7 +233,9 @@ function sessionStatuses(
   const jobs: SessionStatus | undefined = liveJobs === 0
     ? undefined
     : {
-      state: 'ongoing',
+      // The still ring (not the animated chase): background work is alive but
+      // the agent loop is not, and the two must read apart in the list.
+      state: 'background',
       label: t(
         liveJobs === 1 ? 'status.jobsRunning.one' : 'status.jobsRunning.other',
         { n: liveJobs },
