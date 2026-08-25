@@ -43,6 +43,12 @@ function classifyPiAiError(message: string): string {
   if (/\b400\b|invalid.?request/i.test(message)) return 'INVALID_REQUEST'
   if (/\b5\d\d\b/.test(message)) return 'SERVER'
   if (/\btime(?:d)?\s*out\b|timeout/i.test(message)) return 'TIMEOUT'
+  // An OpenAI-compatible relay ends its stream with a terminal
+  // `finish_reason: "network_error"` chunk when its own upstream hop fails
+  // mid-response; pi-ai maps that chunk to this exact wording. Like the
+  // stream-ended wordings below, the connection dropped, so this is a
+  // transport failure — retryable by the default policy.
+  if (/^Provider finish_reason: network_error/.test(message)) return 'TRANSPORT'
   // A stream truncated before the provider's terminal event: each pi-ai provider
   // throws its own wording when the wire closes mid-response without a terminal
   // event (`… stream ended before message_stop`, `… before a terminal response

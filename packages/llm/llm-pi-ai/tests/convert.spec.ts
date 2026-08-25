@@ -794,9 +794,19 @@ describe('mapStopReason / mapUsage', () => {
     'OpenAI Responses stream ended before a terminal response event',
     'openrouter stream ended without a terminal event',
     'Stream ended without finish_reason',
+    // An OpenAI-compatible relay's terminal finish_reason chunk for its own
+    // failed upstream hop (pi-ai's openai-completions mapStopReason wording).
+    'Provider finish_reason: network_error',
   ])('maps pi-ai transport wording %j', (errorMessage) => {
     expect(mapStopReason(assistant({ stopReason: 'error', errorMessage })))
       .toMatchObject({ kind: 'error', failure: { code: 'TRANSPORT' } })
+  })
+
+  it('keeps non-transport relay finish reasons unclassified', () => {
+    expect(mapStopReason(assistant({
+      stopReason: 'error',
+      errorMessage: 'Provider finish_reason: content_filter',
+    }))).toMatchObject({ kind: 'error', failure: { code: 'PI_AI_ERROR' } })
   })
 
   it('uses pi-ai provider-specific overflow classification without losing rate-limit exclusions', () => {
